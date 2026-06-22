@@ -1,0 +1,567 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ============================================================
+// AUTHENTICATION & USERS
+// ============================================================
+
+enum Role {
+  ADMIN
+  CREATOR
+  CLIENT
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime?
+  name          String?
+  image         String?
+  role          Role      @default(CLIENT)
+  passwordHash  String?
+
+  accounts          Account[]
+  sessions          Session[]
+  creatorProfile    CreatorProfile?
+  ticketAssignments TicketAssignment[]
+  sentMessages      Message[]        @relation("MessageSender")
+  notifications     Notification[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ============================================================
+// CREATOR PROFILE
+// ============================================================
+
+enum Availability {
+  FULL_TIME
+  PART_TIME
+  OCCASIONAL
+  WEEKEND
+}
+
+enum ExperienceLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
+
+model CreatorProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  displayName     String
+  bio             String?          @db.Text
+  avatarUrl       String?
+  country         String?
+  city            String?
+  skills          CreatorSkill[]
+  softwareTools   String[]
+  languages       Json             @default("[]")
+  experienceLevel ExperienceLevel  @default(INTERMEDIATE)
+  yearsExperience Int              @default(0)
+  portfolioUrls   String[]
+  cvUrl           String?
+  availability    Availability     @default(OCCASIONAL)
+  hoursPerWeek    Int              @default(10)
+  hourlyRate      Decimal?         @db.Decimal(10, 2)
+  isActive        Boolean          @default(true)
+  isVerified      Boolean          @default(false)
+  joinedAt        DateTime         @default(now())
+
+  assignedTickets   TicketAssignment[]
+  completedProjects Int              @default(0)
+  averageRating     Decimal?         @db.Decimal(3, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("creator_profiles")
+}
+
+// ============================================================
+// SKILLS
+// ============================================================
+
+enum ServiceCategory {
+  VIDEO_EDITING
+  THREE_D
+  DEVELOPMENT
+  SOUND_DESIGN
+  GRAPHIC_DESIGN
+  TRANSLATION
+  DISCORD_SERVER
+  OTHER
+}
+
+model Skill {
+  id            String          @id @default(cuid())
+  name          String          @unique
+  category      ServiceCategory
+  description   String?
+  iconName      String?
+  discordRoleId String?
+  creators      CreatorSkill[]
+
+  createdAt DateTime @default(now())
+
+  @@map("skills")
+}
+
+model CreatorSkill {
+  id        String @id @default(cuid())
+  creatorId String
+  skillId   String
+
+  creator CreatorProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  skill   Skill          @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([creatorId, skillId])
+  @@map("creator_skills")
+}
+
+// ============================================================
+// TICKETS
+// ============================================================
+
+enum TicketType {
+  JOIN
+  SERVICE
+  CONTACT
+}
+
+enum TicketStatus {
+  PENDING_VERIFICATION
+  VERIFIED
+  IN_REVIEW
+  ACCEPTED
+  ASSIGNED
+  IN_PROGRESS
+  PENDING_REVISION
+  PENDING_PAYMENT
+  COMPLETED
+  REJECTED
+  CANCELLED
+}
+
+model Ticket {
+  id     String       @id @default(cuid())
+  code   String       @unique
+  type   TicketType
+  status TicketStatus @default(PENDING_VERIFICATION)
+
+  submitterName    String
+  submitterEmail   String
+  submitterDiscord String?
+  submitterPhone   String?
+  submitterCountry String?
+
+  emailVerified        Boolean   @default(false)
+  verificationCode     String?
+  verificationExpires  DateTime?
+  verificationAttempts Int       @default(0)
+
+  discussionCode String? @unique
+
+  formData Json
+
+  estimatedPriceMin Decimal? @db.Decimal(10, 2)
+  estimatedPriceMax Decimal? @db.Decimal(10, 2)
+  finalPrice        Decimal? @db.Decimal(10, 2)
+  pricingParams     Json?
+
+  discordChannelId String?
+  discordMessageId String?
+
+  assignments TicketAssignment[]
+  messages    Message[]
+  project     Project?
+  invoices    Invoice[]
+  statusLogs  TicketStatusLog[]
+  files       TicketFile[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  closedAt  DateTime?
+
+  @@index([type, status])
+  @@index([submitterEmail])
+  @@index([discussionCode])
+  @@map("tickets")
+}
+
+model TicketStatusLog {
+  id       String @id @default(cuid())
+  ticketId String
+  ticket   Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  fromStatus TicketStatus?
+  toStatus   TicketStatus
+  changedBy  String?
+  note       String?
+
+  createdAt DateTime @default(now())
+
+  @@map("ticket_status_logs")
+}
+
+model TicketAssignment {
+  id        String @id @default(cuid())
+  ticketId  String
+  userId    String
+  creatorId String
+
+  ticket  Ticket         @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  creator CreatorProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+
+  selfAssigned Boolean @default(false)
+  assignedBy   String?
+
+  createdAt DateTime @default(now())
+
+  @@unique([ticketId, userId])
+  @@map("ticket_assignments")
+}
+
+model TicketFile {
+  id       String @id @default(cuid())
+  ticketId String
+  ticket   Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  fileName   String
+  fileUrl    String
+  fileSize   Int
+  mimeType   String
+  uploadedBy String?
+
+  createdAt DateTime @default(now())
+
+  @@map("ticket_files")
+}
+
+// ============================================================
+// MESSAGES
+// ============================================================
+
+enum MessageType {
+  TEXT
+  FILE
+  SYSTEM
+  IMAGE
+}
+
+model Message {
+  id      String      @id @default(cuid())
+  type    MessageType @default(TEXT)
+  content String      @db.Text
+
+  ticketId  String?
+  ticket    Ticket?  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  senderId   String?
+  sender     User?   @relation("MessageSender", fields: [senderId], references: [id])
+  senderName String
+  senderType String
+
+  fileUrl  String?
+  fileName String?
+  fileSize Int?
+
+  discordMessageId String?
+  fromDiscord      Boolean @default(false)
+
+  isRead   Boolean   @default(false)
+  readAt   DateTime?
+  isEdited Boolean   @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ticketId, createdAt])
+  @@index([projectId, createdAt])
+  @@map("messages")
+}
+
+// ============================================================
+// PROJECTS
+// ============================================================
+
+enum ProjectStatus {
+  DRAFT
+  PLANNING
+  IN_PROGRESS
+  IN_REVISION
+  PENDING_APPROVAL
+  COMPLETED
+  CANCELLED
+  ON_HOLD
+}
+
+model Project {
+  id     String        @id @default(cuid())
+  title  String
+  status ProjectStatus @default(DRAFT)
+
+  ticketId String @unique
+  ticket   Ticket @relation(fields: [ticketId], references: [id])
+
+  description   String?   @db.Text
+  deadline      DateTime?
+  startDate     DateTime?
+  completedDate DateTime?
+  progress      Int       @default(0)
+  agreedPrice   Decimal?  @db.Decimal(10, 2)
+  categories    ServiceCategory[]
+
+  deliverables Deliverable[]
+  messages     Message[]
+  invoices     Invoice[]
+  milestones   Milestone[]
+  statusLogs   ProjectStatusLog[]
+
+  discordChannelId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("projects")
+}
+
+model ProjectStatusLog {
+  id        String @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  fromStatus ProjectStatus?
+  toStatus   ProjectStatus
+  changedBy  String?
+  note       String?
+
+  createdAt DateTime @default(now())
+
+  @@map("project_status_logs")
+}
+
+model Milestone {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String?
+  dueDate     DateTime?
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+  order       Int       @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("milestones")
+}
+
+model Deliverable {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  fileName     String
+  fileUrl      String
+  fileSize     Int
+  mimeType     String
+  version      Int     @default(1)
+  description  String?
+  uploadedById String?
+  isApproved   Boolean   @default(false)
+  approvedAt   DateTime?
+  feedback     String?   @db.Text
+
+  createdAt DateTime @default(now())
+
+  @@map("deliverables")
+}
+
+// ============================================================
+// INVOICES
+// ============================================================
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+  CANCELLED
+  REFUNDED
+}
+
+model Invoice {
+  id     String        @id @default(cuid())
+  number String        @unique
+  status InvoiceStatus @default(DRAFT)
+
+  ticketId  String?
+  ticket    Ticket?  @relation(fields: [ticketId], references: [id])
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id])
+
+  clientName    String
+  clientEmail   String
+  clientAddress String? @db.Text
+
+  subtotal    Decimal @db.Decimal(10, 2)
+  taxRate     Decimal @default(0) @db.Decimal(5, 2)
+  taxAmount   Decimal @db.Decimal(10, 2)
+  totalAmount Decimal @db.Decimal(10, 2)
+  currency    String  @default("EUR")
+
+  items InvoiceItem[]
+
+  stripeInvoiceId  String? @unique
+  stripePaymentUrl String?
+
+  issuedAt DateTime?
+  dueAt    DateTime?
+  paidAt   DateTime?
+  notes    String?   @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id        String  @id @default(cuid())
+  invoiceId String
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  description String
+  quantity    Decimal @db.Decimal(10, 2)
+  unitPrice   Decimal @db.Decimal(10, 2)
+  totalPrice  Decimal @db.Decimal(10, 2)
+  order       Int     @default(0)
+
+  @@map("invoice_items")
+}
+
+// ============================================================
+// NOTIFICATIONS
+// ============================================================
+
+enum NotificationType {
+  TICKET_NEW
+  TICKET_VERIFIED
+  TICKET_STATUS_CHANGED
+  MESSAGE_NEW
+  TASK_AVAILABLE
+  TASK_ASSIGNED
+  PROJECT_UPDATED
+  PAYMENT_RECEIVED
+  INVOICE_SENT
+  SYSTEM
+}
+
+model Notification {
+  id     String           @id @default(cuid())
+  userId String
+  user   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type   NotificationType
+
+  title   String
+  message String
+  link    String?
+  isRead  Boolean   @default(false)
+  readAt  DateTime?
+
+  metadata Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, isRead, createdAt])
+  @@map("notifications")
+}
+
+// ============================================================
+// SETTINGS & PRICING
+// ============================================================
+
+model Setting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value Json
+
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}
+
+model PricingConfig {
+  id       String          @id @default(cuid())
+  category ServiceCategory @unique
+
+  basePriceMin Decimal @db.Decimal(10, 2)
+  basePriceMax Decimal @db.Decimal(10, 2)
+  unit         String  @default("day")
+  multipliers  Json
+  isActive     Boolean @default(true)
+
+  updatedAt DateTime @updatedAt
+
+  @@map("pricing_configs")
+}
