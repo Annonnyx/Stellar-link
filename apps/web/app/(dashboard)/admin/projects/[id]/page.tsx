@@ -112,7 +112,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                 <p className="text-sm text-muted-foreground">Aucun milestone défini.</p>
               ) : (
                 <div className="space-y-3">
-                  {project.milestones.map((m) => (
+                  {project.milestones.map((m: any) => (
                     <div key={m.id} className="flex items-center gap-3">
                       <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center ${m.completed ? "border-green-500 bg-green-500/20" : "border-border"}`}>
                         {m.completed && <span className="text-green-500 text-xs">✓</span>}
@@ -135,7 +135,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                 <p className="text-sm text-muted-foreground">Aucun livrable uploadé.</p>
               ) : (
                 <div className="space-y-2">
-                  {project.deliverables.map((d) => (
+                  {project.deliverables.map((d: any) => (
                     <div key={d.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/30 text-sm">
                       <div>
                         <p className="font-medium">{d.fileName}</p>
@@ -161,7 +161,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
               <CardHeader><CardTitle>Factures</CardTitle></CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {project.invoices.map((inv) => (
+                  {project.invoices.map((inv: any) => (
                     <div key={inv.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/30 text-sm">
                       <span className="font-mono">{inv.number}</span>
                       <div className="flex items-center gap-2">
@@ -182,7 +182,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         <CardHeader><CardTitle>Historique des statuts</CardTitle></CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {project.statusLogs.map((log) => (
+            {project.statusLogs.map((log: any) => (
               <div key={log.id} className="flex items-start gap-3 text-sm">
                 <div className="mt-1 h-2 w-2 rounded-full bg-violet-500 shrink-0" />
                 <div>
