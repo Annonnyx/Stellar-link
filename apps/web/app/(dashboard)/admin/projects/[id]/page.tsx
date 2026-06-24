@@ -85,7 +85,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           <CardContent className="pt-6">
             <div className="text-sm text-muted-foreground mb-1">Livrables</div>
             <div className="text-2xl font-bold">{project.deliverables.length}</div>
-            <p className="text-xs text-muted-foreground">{project.deliverables.filter((d) => d.isApproved).length} approuvés</p>
+            <p className="text-xs text-muted-foreground">{project.deliverables.filter((d: any) => d.isApproved).length} approuvés</p>
           </CardContent>
         </Card>
       </div>
