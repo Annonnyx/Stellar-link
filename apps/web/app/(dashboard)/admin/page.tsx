@@ -133,7 +133,7 @@ export default async function AdminDashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {recentTickets.map((ticket) => (
+                {recentTickets.map((ticket: any) => (
                   <tr key={ticket.id} className="border-b border-border/20 hover:bg-muted/30 transition-colors">
                     <td className="py-3 px-4 font-mono text-xs">{ticket.code}</td>
                     <td className="py-3 px-4">
