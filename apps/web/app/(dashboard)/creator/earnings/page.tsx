@@ -19,7 +19,7 @@ async function getEarnings() {
     select: { ticketId: true },
   });
 
-  const ticketIds = assignments.map((a) => a.ticketId);
+  const ticketIds = assignments.map((a: any) => a.ticketId);
 
   const invoices = await prisma.invoice.findMany({
     where: { ticketId: { in: ticketIds } },
@@ -35,12 +35,12 @@ async function getEarnings() {
   });
 
   const total = invoices
-    .filter((i) => i.status === "PAID")
-    .reduce((sum, i) => sum + Number(i.totalAmount), 0);
+    .filter((i: any) => i.status === "PAID")
+    .reduce((sum: number, i: any) => sum + Number(i.totalAmount), 0);
 
   const pending = invoices
-    .filter((i) => i.status === "SENT")
-    .reduce((sum, i) => sum + Number(i.totalAmount), 0);
+    .filter((i: any) => i.status === "SENT")
+    .reduce((sum: number, i: any) => sum + Number(i.totalAmount), 0);
 
   return { invoices, total, pending };
 }
@@ -96,7 +96,7 @@ export default async function CreatorEarningsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {invoices.map((inv) => (
+                  {invoices.map((inv: any) => (
                     <tr key={inv.id} className="border-b border-border/20">
                       <td className="py-3 px-4 font-mono text-xs">{inv.number}</td>
                       <td className="py-3 px-4">{inv.clientName}</td>
