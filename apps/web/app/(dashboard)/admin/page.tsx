@@ -36,7 +36,7 @@ async function getStats() {
     activeProjects,
     totalCreators,
     totalRevenue: Number(totalRevenue._sum.totalAmount || 0),
-    statusDistribution: statusDistribution.map((s) => ({ status: s.status, count: s._count.status })),
+    statusDistribution: statusDistribution.map((s: any) => ({ status: s.status, count: s._count.status })),
   };
 }
 
