@@ -10,7 +10,7 @@ async function getCreators() {
     take: 50,
   });
 
-  return creators.map((c) => ({
+  return creators.map((c: any) => ({
     id: c.id,
     name: c.user?.name || "Inconnu",
     email: c.user?.email || "",
