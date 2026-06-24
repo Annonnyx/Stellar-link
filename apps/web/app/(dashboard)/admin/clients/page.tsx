@@ -33,8 +33,8 @@ async function getClients() {
   for (const t of tickets) {
     const existing = clientMap.get(t.submitterEmail);
     const paidAmount = t.invoices
-      .filter((i: { status: string }) => i.status === "PAID")
-      .reduce((sum: number, i: { totalAmount: number }) => sum + Number(i.totalAmount), 0);
+      .filter((i) => i.status === "PAID")
+      .reduce((sum, i) => sum + Number(i.totalAmount), 0);
 
     if (existing) {
       existing.ticketCount++;
